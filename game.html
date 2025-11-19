@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>IsoMaze 2.5D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Header Info */
+        .header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .score-box {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+            font-size: 1rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Center Message (Game Over / Win) */
+        #message-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 16px;
+            border: 2px solid #4ade80;
+            display: none;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 50px rgba(74, 222, 128, 0.2);
+            z-index: 100; 
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            color: #4ade80;
+            font-size: 2.5rem;
+        }
+
+        p {
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        button.primary-btn {
+            background: #4ade80;
+            color: #003300;
+            border: none;
+            padding: 12px 32px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        button.primary-btn:hover {
+            background: #22c55e;
+            transform: scale(1.05);
+        }
+
+        /* Mobile Controls */
+        .d-pad {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 160px;
+            height: 160px;
+            pointer-events: auto;
+            display: block; 
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 10px; flex-direction: row; }
+        }
+
+        .d-btn {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .d-btn:active { background: rgba(74, 222, 128, 0.5); }
+        .d-up { top: 0; left: 55px; }
+        .d-down { bottom: 0; left: 55px; }
+        .d-left { top: 55px; left: 0; }
+        .d-right { top: 55px; right: 0; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Game Canvas Container --><div id="game-container"></div>
+
+    <!-- UI Layer --><div id="ui-layer">
+        <div class="header">
+            <div class="stats-group">
+                <div class="score-box" id="level-display">Level: 1</div>
+                <div class="score-box" style="color: #fbbf24">Steps: <span id="step-counter">0</span></div>
+            </div>
+        </div>
+
+        <div class="d-pad" id="mobile-controls">
+            <div class="d-btn d-up" data-dir="up">▲</div>
+            <div class="d-btn d-down" data-dir="down">▼</div>
+            <div class="d-btn d-left" data-dir="left">◀</div>
+            <div class="d-btn d-right" data-dir="right">▶</div>
+        </div>
+    </div>
+
+    <!-- Message Overlay --><div id="message-overlay">
+        <h1 id="msg-title">Level Complete!</h1>
+        <p id="msg-text">Great job navigating the maze.</p>
+        <button class="primary-btn" id="next-btn">Next Level</button>
+    </div>
+
+    <!-- Three.js from CDN --><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- Game State & Constants ---
+        let CONFIG = {
+            cellSize: 10,
+            wallHeight: 8,
+            moveSpeed: 0.15,
+            themeName: "Default Dark",
+            colors: {
+                bg: 0x111111,
+                wall: 0x374151,
+                wallTop: 0x4b5563,
+                floor: 0x1f2937,
+                player: 0xf43f5e,
+                goal: 0x4ade80
+            }
+        };
+
+        let state = {
+            level: 1,
+            steps: 0,
+            gridWidth: 9,
+            gridHeight: 9,
+            maze: [], 
+            playerPos: { x: 1, z: 1 },
+            targetPos: { x: 1, z: 1 },
+            goalPos: { x: 1, z: 1 },
+            isMoving: false,
+            isPlaying: true,
+            isTransitioning: false,
+            isEntering: false, // Added state for entrance animation
+        };
+
+        // --- Three.js Globals ---
+        let scene, camera, renderer;
+        let playerMesh, goalMesh, floorMesh;
+        let mazeGroup = new THREE.Group();
+        let particleGroup = new THREE.Group();
+        let trailGroup = new THREE.Group();
+        
+        // --- Audio System ---
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSwoosh(pitchStart = 150, pitchEnd = 300, duration = 0.3) {
+            if (!audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            
+            // Filter sweep (adds the "whoosh" texture)
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(200, now);
+            filter.frequency.exponentialRampToValueAtTime(2000, now + (duration/3));
+            filter.frequency.exponentialRampToValueAtTime(100, now + duration);
+
+            // Pitch movement
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(pitchStart, now);
+            osc.frequency.linearRampToValueAtTime(pitchEnd, now + (duration/3));
+            osc.frequency.linearRampToValueAtTime(pitchStart * 0.5, now + duration);
+
+            // Volume Envelope
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            // Major Arpeggio: C5, E5, G5, C6
+            const notes = [523.25, 659.25, 783.99, 1046.50]; 
+            
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine'; // Sine waves sound pure and "bell-like"
+                osc.frequency.value = freq;
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                const startTime = now + (i * 0.08); // Fast sequence
+                const duration = 0.6;
+                
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            });
+        }
+
+        function init() {
+            const container = document.getElementById('game-container');
+
+            scene = new THREE.Scene();
+            updateSceneColors(); 
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 60; 
+            camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            camera.position.set(100, 100, 100); 
+            camera.lookAt(scene.position);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight.position.set(50, 80, 30);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 500;
+            const shadowD = 100;
+            dirLight.shadow.camera.left = -shadowD;
+            dirLight.shadow.camera.right = shadowD;
+            dirLight.shadow.camera.top = shadowD;
+            dirLight.shadow.camera.bottom = -shadowD;
+            scene.add(dirLight);
+
+            scene.add(mazeGroup);
+            scene.add(particleGroup);
+            scene.add(trailGroup);
+
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('keydown', onKeyDown);
+            document.getElementById('next-btn').addEventListener('click', nextLevel);
+
+            setupTouchControls();
+
+            startLevel();
+            animate();
+        }
+
+        function updateSceneColors() {
+            scene.background = new THREE.Color(CONFIG.colors.bg);
+            scene.fog = new THREE.Fog(CONFIG.colors.bg, 50, 150);
+        }
+
+        function generateMaze(width, height) {
+            const w = width % 2 === 0 ? width + 1 : width;
+            const h = height % 2 === 0 ? height + 1 : height;
+            
+            const map = [];
+            for (let z = 0; z < h; z++) {
+                map[z] = [];
+                for (let x = 0; x < w; x++) {
+                    map[z][x] = 1; 
+                }
+            }
+
+            const stack = [];
+            const startX = 1;
+            const startZ = 1;
+            map[startZ][startX] = 0; 
+            stack.push({ x: startX, z: startZ });
+
+            const dirs = [
+                { x: 0, z: -2 }, { x: 0, z: 2 },
+                { x: -2, z: 0 }, { x: 2, z: 0 }
+            ];
+
+            while (stack.length > 0) {
+                const current = stack[stack.length - 1];
+                dirs.sort(() => Math.random() - 0.5);
+
+                let found = false;
+                for (let dir of dirs) {
+                    const nx = current.x + dir.x;
+                    const nz = current.z + dir.z;
+
+                    if (nx > 0 && nx < w - 1 && nz > 0 && nz < h - 1 && map[nz][nx] === 1) {
+                        map[nz][nx] = 0; 
+                        map[current.z + dir.z / 2][current.x + dir.x / 2] = 0; 
+                        stack.push({ x: nx, z: nz });
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) stack.pop();
+            }
+            return { map, w, h };
+        }
+
+        function startLevel() {
+            while(mazeGroup.children.length > 0){ 
+                mazeGroup.remove(mazeGroup.children[0]); 
+            }
+            
+            // Cleanup old trails
+            while(trailGroup.children.length > 0){ 
+                const t = trailGroup.children[0];
+                t.geometry.dispose();
+                t.material.dispose();
+                trailGroup.remove(t); 
+            }
+            
+            state.steps = 0;
+            document.getElementById('step-counter').innerText = state.steps;
+            document.getElementById('level-display').innerText = `Level: ${state.level}`;
+            document.getElementById('message-overlay').style.display = 'none';
+            state.isPlaying = true;
+
+            const size = 9 + Math.floor(state.level / 2) * 2;
+            
+            const mazeData = generateMaze(size, size);
+            state.maze = mazeData.map;
+            state.gridWidth = mazeData.w;
+            state.gridHeight = mazeData.h;
+
+            state.playerPos = { x: 1, z: 1 };
+            state.targetPos = { x: 1, z: 1 };
+            
+            let maxDist = 0;
+            let bestGoal = { x: 1, z: 1 };
+            for(let z=0; z<state.gridHeight; z++) {
+                for(let x=0; x<state.gridWidth; x++) {
+                    if (state.maze[z][x] === 0) {
+                        const d = Math.sqrt((x-1)**2 + (z-1)**2);
+                        if (d > maxDist) {
+                            maxDist = d;
+                            bestGoal = { x, z };
+                        }
+                    }
+                }
+            }
+            state.goalPos = bestGoal;
+
+            build3DWorld();
+            
+            // Trigger the "Fly From Above" entrance
+            enterLevelAnimation();
+        }
+
+        function enterLevelAnimation() {
+            state.isEntering = true;
+            playSwoosh(400, 100, 1.0); // Long drop sound
+            
+            // Setup initial state for animation
+            const targetY = 3; // Normal ground hover height
+            const startY = 150;
+            playerMesh.position.y = startY;
+            playerMesh.scale.set(0.1, 0.1, 0.1); // Start small
+            playerMesh.rotation.set(0, Math.PI * 4, 0); // Prep for spin
+
+            const duration = 1000; // 1 second drop
+            const startTime = Date.now();
+
+            function animateEntry() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Cubic ease-out for smooth landing
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                playerMesh.position.y = THREE.MathUtils.lerp(startY, targetY, ease);
+                
+                const scale = THREE.MathUtils.lerp(0.1, 1, ease);
+                playerMesh.scale.setScalar(scale);
+
+                // Spin while dropping
+                playerMesh.rotation.y = (1 - ease) * Math.PI * 4;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateEntry);
+                } else {
+                    state.isEntering = false;
+                }
+            }
+            animateEntry();
+        }
+
+        function build3DWorld() {
+            const geoWall = new THREE.BoxGeometry(CONFIG.cellSize, CONFIG.wallHeight, CONFIG.cellSize);
+            const matWall = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wall });
+            const matWallTop = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wallTop });
+
+            const floorGeo = new THREE.PlaneGeometry(
+                state.gridWidth * CONFIG.cellSize, 
+                state.gridHeight * CONFIG.cellSize
+            );
+            const floorMat = new THREE.MeshStandardMaterial({ 
+                color: CONFIG.colors.floor, 
+                roughness: 0.8 
+            });
+            floorMesh = new THREE.Mesh(floorGeo, floorMat);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set(
+                (state.gridWidth * CONFIG.cellSize)/2 - CONFIG.cellSize/2, 
+                -0.1, 
+                (state.gridHeight * CONFIG.cellSize)/2 - CONFIG.cellSize/2
+            );
+            floorMesh.receiveShadow = true;
+            mazeGroup.add(floorMesh);
+
+            for (let z = 0; z < state.gridHeight; z++) {
+                for (let x = 0; x < state.gridWidth; x++) {
+                    if (state.maze[z][x] === 1) {
+                        const wall = new THREE.Mesh(geoWall, [matWall, matWall, matWallTop, matWall, matWall, matWall]);
+                        wall.position.set(x * CONFIG.cellSize, CONFIG.wallHeight / 2, z * CONFIG.cellSize);
+                        wall.castShadow = true;
+                        wall.receiveShadow = true;
+                        mazeGroup.add(wall);
+                    }
+                }
+            }
+
+            const goalGeo = new THREE.CylinderGeometry(3, 3, 1, 32);
+            const goalMat = new THREE.MeshLambertMaterial({ 
+                color: CONFIG.colors.goal, 
+                emissive: 0x000000 
+            });
+            goalMesh = new THREE.Mesh(goalGeo, goalMat);
+            goalMesh.position.set(state.goalPos.x * CONFIG.cellSize, 0.5, state.goalPos.z * CONFIG.cellSize);
+            mazeGroup.add(goalMesh);
+
+            const ringGeo = new THREE.TorusGeometry(2.5, 0.3, 8, 32);
+            const ring = new THREE.Mesh(ringGeo, goalMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 3;
+            goalMesh.add(ring);
+
+            if (playerMesh) {
+                scene.remove(playerMesh);
+                playerMesh = undefined;
+            }
+            
+            const playerGeo = new THREE.BoxGeometry(6, 6, 6);
+            const playerMat = new THREE.MeshStandardMaterial({ 
+                color: CONFIG.colors.player,
+                roughness: 0.4
+            });
+            playerMesh = new THREE.Mesh(playerGeo, playerMat);
+            playerMesh.castShadow = true;
+            playerMesh.position.set(state.playerPos.x * CONFIG.cellSize, 3, state.playerPos.z * CONFIG.cellSize);
+            scene.add(playerMesh);
+
+            const startX = state.playerPos.x * CONFIG.cellSize;
+            const startZ = state.playerPos.z * CONFIG.cellSize;
+            camera.position.set(startX + 60, 60, startZ + 60);
+            camera.lookAt(startX, 0, startZ);
+        }
+
+        function onKeyDown(e) {
+            if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
+            
+            initAudio(); // Ensure audio is ready on first interaction
+
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
+                case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); break;
+                case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
+                case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); break;
+            }
+        }
+
+        function setupTouchControls() {
+            const buttons = document.querySelectorAll('.d-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    
+                    initAudio(); // Ensure audio is ready on first interaction
+
+                    if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
+                    const dir = btn.getAttribute('data-dir');
+                    if (dir === 'up') movePlayer(0, -1);
+                    if (dir === 'down') movePlayer(0, 1);
+                    if (dir === 'left') movePlayer(-1, 0);
+                    if (dir === 'right') movePlayer(1, 0);
+                });
+            });
+        }
+
+        function movePlayer(dx, dz) {
+            const dist = Math.abs(playerMesh.position.x - state.targetPos.x * CONFIG.cellSize) + 
+                         Math.abs(playerMesh.position.z - state.targetPos.z * CONFIG.cellSize);
+            
+            if (dist > 1) return; 
+
+            let finalX = state.playerPos.x;
+            let finalZ = state.playerPos.z;
+            let moved = false;
+            
+            while (true) {
+                const nextX = finalX + dx;
+                const nextZ = finalZ + dz;
+
+                // 1. Boundary check
+                if (nextZ < 0 || nextZ >= state.gridHeight || nextX < 0 || nextX >= state.gridWidth) {
+                    break; 
+                }
+
+                // 2. Wall check
+                if (state.maze[nextZ][nextX] === 1) {
+                    break; 
+                }
+
+                finalX = nextX;
+                finalZ = nextZ;
+                moved = true;
+
+                // 3. Sticky Goal Logic: Stop immediately if we hit the goal
+                if (finalX === state.goalPos.x && finalZ === state.goalPos.z) {
+                    break; 
+                }
+
+                // 4. Junction Detection: Stop if we can turn 90 degrees
+                let isJunction = false;
+                if (dx !== 0) { 
+                    // Moving Horizontally (East/West): Check North/South neighbors
+                    // We check if the neighbors are paths (0)
+                    if ((state.maze[finalZ - 1] && state.maze[finalZ - 1][finalX] === 0) ||
+                        (state.maze[finalZ + 1] && state.maze[finalZ + 1][finalX] === 0)) {
+                        isJunction = true;
+                    }
+                } else if (dz !== 0) {
+                    // Moving Vertically (North/South): Check West/East neighbors
+                    if (state.maze[finalZ][finalX - 1] === 0 || state.maze[finalZ][finalX + 1] === 0) {
+                        isJunction = true;
+                    }
+                }
+
+                if (isJunction) {
+                    break;
+                }
+            }
+
+            if (moved) {
+                state.playerPos.x = finalX;
+                state.playerPos.z = finalZ;
+                
+                state.targetPos.x = finalX;
+                state.targetPos.z = finalZ;
+
+                playSwoosh(); // Play standard movement sound
+
+                state.steps++;
+                document.getElementById('step-counter').innerText = state.steps;
+
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            if (state.playerPos.x === state.goalPos.x && state.playerPos.z === state.goalPos.z) {
+                state.isPlaying = false;
+                createWinParticles();
+                playWinSound(); // Trigger celebration audio
+                setTimeout(() => {
+                    document.getElementById('message-overlay').style.display = 'block';
+                }, 500);
+            }
+        }
+
+        function nextLevel() {
+            playerMesh.rotation.set(0, 0, 0); 
+            playerMesh.scale.set(1, 1, 1);
+            state.isTransitioning = true;
+            document.getElementById('message-overlay').style.display = 'none';
+            
+            playSwoosh(200, 800, 0.7); // Rising pitch for warp out
+
+            state.level++; 
+
+            const transitionDuration = 700;
+            const startTime = Date.now();
+            const startY = playerMesh.position.y;
+            
+            function transitionStep() {
+                const elapsed = Date.now() - startTime;
+                let progress = elapsed / transitionDuration;
+
+                if (progress < 1) {
+                    const smoothProgress = progress * progress * (3 - 2 * progress); 
+
+                    playerMesh.position.y = startY + smoothProgress * 150; 
+                    
+                    const scaleVal = THREE.MathUtils.lerp(1, 0.01, smoothProgress);
+                    playerMesh.scale.setScalar(scaleVal);
+
+                    playerMesh.rotation.x += 0.2;
+                    playerMesh.rotation.y += 0.3;
+                    playerMesh.rotation.z += 0.4;
+                    
+                    requestAnimationFrame(transitionStep);
+                } else {
+                    state.isTransitioning = false;
+                    startLevel(); 
+                }
+            }
+            
+            transitionStep();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.003;
+
+            if (playerMesh) {
+                if (!state.isTransitioning && !state.isEntering) { 
+                    const tx = state.targetPos.x * CONFIG.cellSize;
+                    const tz = state.targetPos.z * CONFIG.cellSize;
+                    
+                    playerMesh.position.x += (tx - playerMesh.position.x) * CONFIG.moveSpeed;
+                    playerMesh.position.z += (tz - playerMesh.position.z) * CONFIG.moveSpeed;
+
+                    const vx = tx - playerMesh.position.x;
+                    const vz = tz - playerMesh.position.z;
+                    const speed = Math.sqrt(vx*vx + vz*vz);
+
+                    const hoverY = 4 + Math.sin(time * 2) * 0.5;
+                    playerMesh.position.y = hoverY;
+
+                    const scaleBase = 1;
+                    const scalePulse = Math.sin(time * 4) * 0.1;
+                    
+                    if (speed > 0.5) {
+                        playerMesh.rotation.z = -vx * 0.05; 
+                        playerMesh.rotation.x = vz * 0.05;  
+                        playerMesh.scale.set(1.1, 0.9, 1.1);
+                        spawnTrail();
+                    } else {
+                        playerMesh.rotation.z *= 0.9;
+                        playerMesh.rotation.x *= 0.9;
+                        playerMesh.scale.set(scaleBase + scalePulse, scaleBase - scalePulse, scaleBase + scalePulse);
+                    }
+
+                    const camTargetX = playerMesh.position.x + 60;
+                    const camTargetZ = playerMesh.position.z + 60;
+                    
+                    camera.position.x += (camTargetX - camera.position.x) * 0.05;
+                    camera.position.z += (camTargetZ - camera.position.z) * 0.05;
+                    camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
+                }
+            }
+
+            if (goalMesh) {
+                goalMesh.children[0].rotation.z += 0.02;
+                goalMesh.children[0].position.y = 3 + Math.sin(time * 3) * 0.5;
+            }
+
+            updateParticles();
+            updateTrails();
+            renderer.render(scene, camera);
+        }
+
+        function spawnTrail() {
+            if (!playerMesh.userData.lastTrailPos) playerMesh.userData.lastTrailPos = new THREE.Vector3();
+            
+            // Only spawn if moved far enough from last spawn
+            if (playerMesh.position.distanceTo(playerMesh.userData.lastTrailPos) > 2.5) {
+                const tGeo = new THREE.BoxGeometry(6, 6, 6);
+                const tMat = new THREE.MeshBasicMaterial({ 
+                    color: CONFIG.colors.player, 
+                    transparent: true, 
+                    opacity: 0.4
+                });
+                const trail = new THREE.Mesh(tGeo, tMat);
+                
+                trail.position.copy(playerMesh.position);
+                trail.rotation.copy(playerMesh.rotation);
+                trail.scale.copy(playerMesh.scale).multiplyScalar(0.9); // Slightly smaller
+                
+                trailGroup.add(trail);
+                playerMesh.userData.lastTrailPos.copy(playerMesh.position);
+            }
+        }
+
+        function updateTrails() {
+            for (let i = trailGroup.children.length - 1; i >= 0; i--) {
+                const t = trailGroup.children[i];
+                t.material.opacity -= 0.025; // Fade speed
+                t.scale.multiplyScalar(0.96); // Shrink speed
+                
+                if (t.material.opacity <= 0) {
+                    trailGroup.remove(t);
+                    t.geometry.dispose();
+                    t.material.dispose();
+                }
+            }
+        }
+
+        function createWinParticles() {
+            const count = 60; // Increased particle count for better effect
+            const color = new THREE.Color(CONFIG.colors.goal);
+            for(let i=0; i<count; i++) {
+                const geo = new THREE.BoxGeometry(1,1,1);
+                const mat = new THREE.MeshBasicMaterial({ color: color });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.copy(playerMesh.position);
+                p.userData.vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 3,
+                    (Math.random() + 1) * 3, // Higher explosion
+                    (Math.random() - 0.5) * 3
+                );
+                particleGroup.add(p);
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particleGroup.children.length - 1; i >= 0; i--) {
+                const p = particleGroup.children[i];
+                p.position.add(p.userData.vel);
+                p.rotation.x += 0.1;
+                p.rotation.y += 0.1;
+                
+                // Gravity
+                p.userData.vel.y -= 0.1;
+                
+                // Shrink
+                p.scale.multiplyScalar(0.95);
+                
+                if (p.scale.x < 0.1) {
+                    particleGroup.remove(p);
+                }
+            }
+        }
+
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 60;
+            
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.top = d;
+            camera.bottom = -d;
+            
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = function () {
+            init();
+        }
+    </script>
+</body>
+</html>
