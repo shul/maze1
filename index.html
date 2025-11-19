@@ -536,8 +536,25 @@
         function setupTouchControls() {
             const buttons = document.querySelectorAll('.d-btn');
             buttons.forEach(btn => {
+                // Prevent double-tap zoom logic
+                btn.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+
+                // Prevent long-press context menu
+                btn.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                });
+
                 btn.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Remove focus immediately to prevent browser from panning/zooming to the element
+                    btn.blur();
                     
                     initAudio(); 
 
