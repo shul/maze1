@@ -1,0 +1,17 @@
+    name: Code Plagiarism Check
+
+    on: [push, pull_request]
+
+    jobs:
+      plagiarism_check:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.x'
+        - name: Install Copydetect
+          run: pip install copydetect
+        - name: Run Copydetect
+          run: copydetect -t . -r . # Replace with your actual reference directories
