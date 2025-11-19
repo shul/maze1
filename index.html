@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IsoMaze 2.5D</title>
     <style>
         body {
@@ -62,24 +62,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* Center Message (Game Over / Win) */
-        #message-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: auto;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 40px;
-            border-radius: 16px;
-            border: 2px solid #4ade80;
-            display: none;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 0 50px rgba(74, 222, 128, 0.2);
-            z-index: 100; 
-        }
-
         h1 {
             margin: 0 0 10px 0;
             color: #4ade80;
@@ -91,23 +73,6 @@
             margin-bottom: 20px;
         }
 
-        button.primary-btn {
-            background: #4ade80;
-            color: #003300;
-            border: none;
-            padding: 12px 32px;
-            font-size: 1.2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.1s, background 0.2s;
-        }
-
-        button.primary-btn:hover {
-            background: #22c55e;
-            transform: scale(1.05);
-        }
-
         /* Mobile Controls */
         .d-pad {
             position: absolute;
@@ -117,6 +82,7 @@
             height: 160px;
             pointer-events: auto;
             display: block; 
+            transform: rotate(45deg);
         }
 
         @media (max-width: 768px) {
@@ -139,6 +105,13 @@
             user-select: none;
             touch-action: none;
         }
+        
+        .d-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
 
         .d-btn:active { background: rgba(74, 222, 128, 0.5); }
         .d-up { top: 0; left: 55px; }
@@ -150,9 +123,11 @@
 </head>
 <body>
 
-    <!-- Game Canvas Container --><div id="game-container"></div>
+    <!-- Game Canvas Container -->
+    <div id="game-container"></div>
 
-    <!-- UI Layer --><div id="ui-layer">
+    <!-- UI Layer -->
+    <div id="ui-layer">
         <div class="header">
             <div class="stats-group">
                 <div class="score-box" id="level-display">Level: 1</div>
@@ -161,20 +136,23 @@
         </div>
 
         <div class="d-pad" id="mobile-controls">
-            <div class="d-btn d-up" data-dir="up">▲</div>
-            <div class="d-btn d-down" data-dir="down">▼</div>
-            <div class="d-btn d-left" data-dir="left">◀</div>
-            <div class="d-btn d-right" data-dir="right">▶</div>
+            <div class="d-btn d-up" data-dir="up">
+                <svg viewBox="0 0 24 24"><path d="M12 6l-8 12h16z"/></svg>
+            </div>
+            <div class="d-btn d-down" data-dir="down">
+                <svg viewBox="0 0 24 24"><path d="M12 18l-8-12h16z"/></svg>
+            </div>
+            <div class="d-btn d-left" data-dir="left">
+                <svg viewBox="0 0 24 24"><path d="M6 12l12-8v16z"/></svg>
+            </div>
+            <div class="d-btn d-right" data-dir="right">
+                <svg viewBox="0 0 24 24"><path d="M18 12l-12-8v16z"/></svg>
+            </div>
         </div>
     </div>
 
-    <!-- Message Overlay --><div id="message-overlay">
-        <h1 id="msg-title">Level Complete!</h1>
-        <p id="msg-text">Great job navigating the maze.</p>
-        <button class="primary-btn" id="next-btn">Next Level</button>
-    </div>
-
-    <!-- Three.js from CDN --><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         // --- Game State & Constants ---
@@ -205,7 +183,7 @@
             isMoving: false,
             isPlaying: true,
             isTransitioning: false,
-            isEntering: false, // Added state for entrance animation
+            isEntering: false, 
         };
 
         // --- Three.js Globals ---
@@ -240,7 +218,7 @@
 
             const now = audioCtx.currentTime;
             
-            // Filter sweep (adds the "whoosh" texture)
+            // Filter sweep
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(200, now);
             filter.frequency.exponentialRampToValueAtTime(2000, now + (duration/3));
@@ -272,13 +250,13 @@
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 
-                osc.type = 'sine'; // Sine waves sound pure and "bell-like"
+                osc.type = 'sine'; 
                 osc.frequency.value = freq;
                 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 
-                const startTime = now + (i * 0.08); // Fast sequence
+                const startTime = now + (i * 0.08); 
                 const duration = 0.6;
                 
                 gain.gain.setValueAtTime(0, startTime);
@@ -331,8 +309,8 @@
 
             window.addEventListener('resize', onWindowResize, false);
             document.addEventListener('keydown', onKeyDown);
-            document.getElementById('next-btn').addEventListener('click', nextLevel);
-
+            
+            // Setup Touch
             setupTouchControls();
 
             startLevel();
@@ -405,7 +383,6 @@
             state.steps = 0;
             document.getElementById('step-counter').innerText = state.steps;
             document.getElementById('level-display').innerText = `Level: ${state.level}`;
-            document.getElementById('message-overlay').style.display = 'none';
             state.isPlaying = true;
 
             const size = 9 + Math.floor(state.level / 2) * 2;
@@ -434,30 +411,26 @@
             state.goalPos = bestGoal;
 
             build3DWorld();
-            
-            // Trigger the "Fly From Above" entrance
             enterLevelAnimation();
         }
 
         function enterLevelAnimation() {
             state.isEntering = true;
-            playSwoosh(400, 100, 1.0); // Long drop sound
+            playSwoosh(400, 100, 1.0); 
             
-            // Setup initial state for animation
-            const targetY = 3; // Normal ground hover height
+            const targetY = 3; 
             const startY = 150;
             playerMesh.position.y = startY;
-            playerMesh.scale.set(0.1, 0.1, 0.1); // Start small
-            playerMesh.rotation.set(0, Math.PI * 4, 0); // Prep for spin
+            playerMesh.scale.set(0.1, 0.1, 0.1); 
+            playerMesh.rotation.set(0, Math.PI * 4, 0); 
 
-            const duration = 1000; // 1 second drop
+            const duration = 1000; 
             const startTime = Date.now();
 
             function animateEntry() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // Cubic ease-out for smooth landing
                 const ease = 1 - Math.pow(1 - progress, 3);
 
                 playerMesh.position.y = THREE.MathUtils.lerp(startY, targetY, ease);
@@ -465,7 +438,6 @@
                 const scale = THREE.MathUtils.lerp(0.1, 1, ease);
                 playerMesh.scale.setScalar(scale);
 
-                // Spin while dropping
                 playerMesh.rotation.y = (1 - ease) * Math.PI * 4;
 
                 if (progress < 1) {
@@ -551,7 +523,7 @@
         function onKeyDown(e) {
             if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
             
-            initAudio(); // Ensure audio is ready on first interaction
+            initAudio(); 
 
             switch(e.key) {
                 case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
@@ -567,7 +539,7 @@
                 btn.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     
-                    initAudio(); // Ensure audio is ready on first interaction
+                    initAudio(); 
 
                     if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
                     const dir = btn.getAttribute('data-dir');
@@ -593,12 +565,10 @@
                 const nextX = finalX + dx;
                 const nextZ = finalZ + dz;
 
-                // 1. Boundary check
                 if (nextZ < 0 || nextZ >= state.gridHeight || nextX < 0 || nextX >= state.gridWidth) {
                     break; 
                 }
 
-                // 2. Wall check
                 if (state.maze[nextZ][nextX] === 1) {
                     break; 
                 }
@@ -607,22 +577,18 @@
                 finalZ = nextZ;
                 moved = true;
 
-                // 3. Sticky Goal Logic: Stop immediately if we hit the goal
                 if (finalX === state.goalPos.x && finalZ === state.goalPos.z) {
                     break; 
                 }
 
-                // 4. Junction Detection: Stop if we can turn 90 degrees
+                // Junction Detection
                 let isJunction = false;
                 if (dx !== 0) { 
-                    // Moving Horizontally (East/West): Check North/South neighbors
-                    // We check if the neighbors are paths (0)
                     if ((state.maze[finalZ - 1] && state.maze[finalZ - 1][finalX] === 0) ||
                         (state.maze[finalZ + 1] && state.maze[finalZ + 1][finalX] === 0)) {
                         isJunction = true;
                     }
                 } else if (dz !== 0) {
-                    // Moving Vertically (North/South): Check West/East neighbors
                     if (state.maze[finalZ][finalX - 1] === 0 || state.maze[finalZ][finalX + 1] === 0) {
                         isJunction = true;
                     }
@@ -640,7 +606,7 @@
                 state.targetPos.x = finalX;
                 state.targetPos.z = finalZ;
 
-                playSwoosh(); // Play standard movement sound
+                playSwoosh(); 
 
                 state.steps++;
                 document.getElementById('step-counter').innerText = state.steps;
@@ -653,10 +619,9 @@
             if (state.playerPos.x === state.goalPos.x && state.playerPos.z === state.goalPos.z) {
                 state.isPlaying = false;
                 createWinParticles();
-                playWinSound(); // Trigger celebration audio
-                setTimeout(() => {
-                    document.getElementById('message-overlay').style.display = 'block';
-                }, 500);
+                playWinSound(); 
+                // Auto transition after 1.5 seconds
+                setTimeout(nextLevel, 1500);
             }
         }
 
@@ -664,9 +629,8 @@
             playerMesh.rotation.set(0, 0, 0); 
             playerMesh.scale.set(1, 1, 1);
             state.isTransitioning = true;
-            document.getElementById('message-overlay').style.display = 'none';
             
-            playSwoosh(200, 800, 0.7); // Rising pitch for warp out
+            playSwoosh(200, 800, 0.7); 
 
             state.level++; 
 
