@@ -371,6 +371,21 @@
             document.addEventListener('gesturestart', function (e) {
                 e.preventDefault();
             });
+
+            // Unlock Audio on first interaction
+            const unlockAudio = () => {
+                initAudio();
+                // Remove listeners once audio is initialized
+                if (audioCtx && audioCtx.state === 'running') {
+                    document.removeEventListener('touchstart', unlockAudio);
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                }
+            };
+
+            document.addEventListener('touchstart', unlockAudio, { passive: true });
+            document.addEventListener('click', unlockAudio);
+            document.addEventListener('keydown', unlockAudio);
         }
 
         function updateSceneColors() {
