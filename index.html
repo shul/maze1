@@ -2,13 +2,14 @@
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-C9P5VYWSBD"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
 
-  gtag('config', 'G-C9P5VYWSBD');
+    gtag('config', 'G-C9P5VYWSBD');
 </script>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -52,7 +53,7 @@
             justify-content: space-between;
             align-items: flex-start;
             color: #fff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             pointer-events: none;
         }
 
@@ -90,12 +91,15 @@
             width: 160px;
             height: 160px;
             pointer-events: auto;
-            display: block; 
+            display: block;
             transform: rotate(45deg);
         }
 
         @media (max-width: 768px) {
-            .header { padding: 10px; flex-direction: row; }
+            .header {
+                padding: 10px;
+                flex-direction: row;
+            }
         }
 
         .d-btn {
@@ -114,22 +118,40 @@
             user-select: none;
             touch-action: none;
         }
-        
+
         .d-btn svg {
             width: 24px;
             height: 24px;
             fill: currentColor;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
         }
 
-        .d-btn:active { background: rgba(74, 222, 128, 0.5); }
-        .d-up { top: 0; left: 55px; }
-        .d-down { bottom: 0; left: 55px; }
-        .d-left { top: 55px; left: 0; }
-        .d-right { top: 55px; right: 0; }
+        .d-btn:active {
+            background: rgba(74, 222, 128, 0.5);
+        }
 
+        .d-up {
+            top: 0;
+            left: 55px;
+        }
+
+        .d-down {
+            bottom: 0;
+            left: 55px;
+        }
+
+        .d-left {
+            top: 55px;
+            left: 0;
+        }
+
+        .d-right {
+            top: 55px;
+            right: 0;
+        }
     </style>
 </head>
+
 <body>
 
     <!-- Game Canvas Container -->
@@ -146,16 +168,24 @@
 
         <div class="d-pad" id="mobile-controls">
             <div class="d-btn d-up" data-dir="up">
-                <svg viewBox="0 0 24 24"><path d="M12 6l-8 12h16z"/></svg>
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 6l-8 12h16z" />
+                </svg>
             </div>
             <div class="d-btn d-down" data-dir="down">
-                <svg viewBox="0 0 24 24"><path d="M12 18l-8-12h16z"/></svg>
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 18l-8-12h16z" />
+                </svg>
             </div>
             <div class="d-btn d-left" data-dir="left">
-                <svg viewBox="0 0 24 24"><path d="M6 12l12-8v16z"/></svg>
+                <svg viewBox="0 0 24 24">
+                    <path d="M6 12l12-8v16z" />
+                </svg>
             </div>
             <div class="d-btn d-right" data-dir="right">
-                <svg viewBox="0 0 24 24"><path d="M18 12l-12-8v16z"/></svg>
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 12l-12-8v16z" />
+                </svg>
             </div>
         </div>
     </div>
@@ -185,14 +215,14 @@
             steps: 0,
             gridWidth: 9,
             gridHeight: 9,
-            maze: [], 
+            maze: [],
             playerPos: { x: 1, z: 1 },
             targetPos: { x: 1, z: 1 },
             goalPos: { x: 1, z: 1 },
             isMoving: false,
             isPlaying: true,
             isTransitioning: false,
-            isEntering: false, 
+            isEntering: false,
         };
 
         // --- Three.js Globals ---
@@ -201,7 +231,7 @@
         let mazeGroup = new THREE.Group();
         let particleGroup = new THREE.Group();
         let trailGroup = new THREE.Group();
-        
+
         // --- Audio System ---
         let audioCtx;
 
@@ -216,7 +246,7 @@
 
         function playSwoosh(pitchStart = 150, pitchEnd = 300, duration = 0.3) {
             if (!audioCtx) return;
-            
+
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
@@ -226,17 +256,17 @@
             gain.connect(audioCtx.destination);
 
             const now = audioCtx.currentTime;
-            
+
             // Filter sweep
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(200, now);
-            filter.frequency.exponentialRampToValueAtTime(2000, now + (duration/3));
+            filter.frequency.exponentialRampToValueAtTime(2000, now + (duration / 3));
             filter.frequency.exponentialRampToValueAtTime(100, now + duration);
 
             // Pitch movement
-            osc.type = 'sine'; 
+            osc.type = 'sine';
             osc.frequency.setValueAtTime(pitchStart, now);
-            osc.frequency.linearRampToValueAtTime(pitchEnd, now + (duration/3));
+            osc.frequency.linearRampToValueAtTime(pitchEnd, now + (duration / 3));
             osc.frequency.linearRampToValueAtTime(pitchStart * 0.5, now + duration);
 
             // Volume Envelope
@@ -253,25 +283,25 @@
             const now = audioCtx.currentTime;
 
             // Major Arpeggio: C5, E5, G5, C6
-            const notes = [523.25, 659.25, 783.99, 1046.50]; 
-            
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+
             notes.forEach((freq, i) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                
-                osc.type = 'sine'; 
+
+                osc.type = 'sine';
                 osc.frequency.value = freq;
-                
+
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                
-                const startTime = now + (i * 0.08); 
+
+                const startTime = now + (i * 0.08);
                 const duration = 0.6;
-                
+
                 gain.gain.setValueAtTime(0, startTime);
                 gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
                 gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-                
+
                 osc.start(startTime);
                 osc.stop(startTime + duration);
             });
@@ -281,12 +311,12 @@
             const container = document.getElementById('game-container');
 
             scene = new THREE.Scene();
-            updateSceneColors(); 
+            updateSceneColors();
 
             const aspect = window.innerWidth / window.innerHeight;
-            const d = 60; 
+            const d = 60;
             camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-            camera.position.set(100, 100, 100); 
+            camera.position.set(100, 100, 100);
             camera.lookAt(scene.position);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -318,12 +348,29 @@
 
             window.addEventListener('resize', onWindowResize, false);
             document.addEventListener('keydown', onKeyDown);
-            
+
             // Setup Touch
             setupTouchControls();
 
             startLevel();
             animate();
+
+            // Prevent Zooming
+            document.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=')) {
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('wheel', function (e) {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
         }
 
         function updateSceneColors() {
@@ -334,19 +381,19 @@
         function generateMaze(width, height) {
             const w = width % 2 === 0 ? width + 1 : width;
             const h = height % 2 === 0 ? height + 1 : height;
-            
+
             const map = [];
             for (let z = 0; z < h; z++) {
                 map[z] = [];
                 for (let x = 0; x < w; x++) {
-                    map[z][x] = 1; 
+                    map[z][x] = 1;
                 }
             }
 
             const stack = [];
             const startX = 1;
             const startZ = 1;
-            map[startZ][startX] = 0; 
+            map[startZ][startX] = 0;
             stack.push({ x: startX, z: startZ });
 
             const dirs = [
@@ -364,8 +411,8 @@
                     const nz = current.z + dir.z;
 
                     if (nx > 0 && nx < w - 1 && nz > 0 && nz < h - 1 && map[nz][nx] === 1) {
-                        map[nz][nx] = 0; 
-                        map[current.z + dir.z / 2][current.x + dir.x / 2] = 0; 
+                        map[nz][nx] = 0;
+                        map[current.z + dir.z / 2][current.x + dir.x / 2] = 0;
                         stack.push({ x: nx, z: nz });
                         found = true;
                         break;
@@ -377,25 +424,25 @@
         }
 
         function startLevel() {
-            while(mazeGroup.children.length > 0){ 
-                mazeGroup.remove(mazeGroup.children[0]); 
+            while (mazeGroup.children.length > 0) {
+                mazeGroup.remove(mazeGroup.children[0]);
             }
-            
+
             // Cleanup old trails
-            while(trailGroup.children.length > 0){ 
+            while (trailGroup.children.length > 0) {
                 const t = trailGroup.children[0];
                 t.geometry.dispose();
                 t.material.dispose();
-                trailGroup.remove(t); 
+                trailGroup.remove(t);
             }
-            
+
             state.steps = 0;
             document.getElementById('step-counter').innerText = state.steps;
             document.getElementById('level-display').innerText = `Level: ${state.level}`;
             state.isPlaying = true;
 
             const size = 9 + Math.floor(state.level / 2) * 2;
-            
+
             const mazeData = generateMaze(size, size);
             state.maze = mazeData.map;
             state.gridWidth = mazeData.w;
@@ -403,13 +450,13 @@
 
             state.playerPos = { x: 1, z: 1 };
             state.targetPos = { x: 1, z: 1 };
-            
+
             let maxDist = 0;
             let bestGoal = { x: 1, z: 1 };
-            for(let z=0; z<state.gridHeight; z++) {
-                for(let x=0; x<state.gridWidth; x++) {
+            for (let z = 0; z < state.gridHeight; z++) {
+                for (let x = 0; x < state.gridWidth; x++) {
                     if (state.maze[z][x] === 0) {
-                        const d = Math.sqrt((x-1)**2 + (z-1)**2);
+                        const d = Math.sqrt((x - 1) ** 2 + (z - 1) ** 2);
                         if (d > maxDist) {
                             maxDist = d;
                             bestGoal = { x, z };
@@ -425,25 +472,25 @@
 
         function enterLevelAnimation() {
             state.isEntering = true;
-            playSwoosh(400, 100, 1.0); 
-            
-            const targetY = 3; 
+            playSwoosh(400, 100, 1.0);
+
+            const targetY = 3;
             const startY = 150;
             playerMesh.position.y = startY;
-            playerMesh.scale.set(0.1, 0.1, 0.1); 
-            playerMesh.rotation.set(0, Math.PI * 4, 0); 
+            playerMesh.scale.set(0.1, 0.1, 0.1);
+            playerMesh.rotation.set(0, Math.PI * 4, 0);
 
-            const duration = 1000; 
+            const duration = 1000;
             const startTime = Date.now();
 
             function animateEntry() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                
+
                 const ease = 1 - Math.pow(1 - progress, 3);
 
                 playerMesh.position.y = THREE.MathUtils.lerp(startY, targetY, ease);
-                
+
                 const scale = THREE.MathUtils.lerp(0.1, 1, ease);
                 playerMesh.scale.setScalar(scale);
 
@@ -464,19 +511,19 @@
             const matWallTop = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wallTop });
 
             const floorGeo = new THREE.PlaneGeometry(
-                state.gridWidth * CONFIG.cellSize, 
+                state.gridWidth * CONFIG.cellSize,
                 state.gridHeight * CONFIG.cellSize
             );
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: CONFIG.colors.floor, 
-                roughness: 0.8 
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.floor,
+                roughness: 0.8
             });
             floorMesh = new THREE.Mesh(floorGeo, floorMat);
             floorMesh.rotation.x = -Math.PI / 2;
             floorMesh.position.set(
-                (state.gridWidth * CONFIG.cellSize)/2 - CONFIG.cellSize/2, 
-                -0.1, 
-                (state.gridHeight * CONFIG.cellSize)/2 - CONFIG.cellSize/2
+                (state.gridWidth * CONFIG.cellSize) / 2 - CONFIG.cellSize / 2,
+                -0.1,
+                (state.gridHeight * CONFIG.cellSize) / 2 - CONFIG.cellSize / 2
             );
             floorMesh.receiveShadow = true;
             mazeGroup.add(floorMesh);
@@ -494,9 +541,9 @@
             }
 
             const goalGeo = new THREE.CylinderGeometry(3, 3, 1, 32);
-            const goalMat = new THREE.MeshLambertMaterial({ 
-                color: CONFIG.colors.goal, 
-                emissive: 0x000000 
+            const goalMat = new THREE.MeshLambertMaterial({
+                color: CONFIG.colors.goal,
+                emissive: 0x000000
             });
             goalMesh = new THREE.Mesh(goalGeo, goalMat);
             goalMesh.position.set(state.goalPos.x * CONFIG.cellSize, 0.5, state.goalPos.z * CONFIG.cellSize);
@@ -512,9 +559,9 @@
                 scene.remove(playerMesh);
                 playerMesh = undefined;
             }
-            
+
             const playerGeo = new THREE.BoxGeometry(6, 6, 6);
-            const playerMat = new THREE.MeshStandardMaterial({ 
+            const playerMat = new THREE.MeshStandardMaterial({
                 color: CONFIG.colors.player,
                 roughness: 0.4
             });
@@ -531,10 +578,10 @@
 
         function onKeyDown(e) {
             if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
-            
-            initAudio(); 
 
-            switch(e.key) {
+            initAudio();
+
+            switch (e.key) {
                 case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
                 case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); break;
                 case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
@@ -561,11 +608,11 @@
                 btn.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     // Remove focus immediately to prevent browser from panning/zooming to the element
                     btn.blur();
-                    
-                    initAudio(); 
+
+                    initAudio();
 
                     if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
                     const dir = btn.getAttribute('data-dir');
@@ -578,25 +625,25 @@
         }
 
         function movePlayer(dx, dz) {
-            const dist = Math.abs(playerMesh.position.x - state.targetPos.x * CONFIG.cellSize) + 
-                         Math.abs(playerMesh.position.z - state.targetPos.z * CONFIG.cellSize);
-            
-            if (dist > 1) return; 
+            const dist = Math.abs(playerMesh.position.x - state.targetPos.x * CONFIG.cellSize) +
+                Math.abs(playerMesh.position.z - state.targetPos.z * CONFIG.cellSize);
+
+            if (dist > 1) return;
 
             let finalX = state.playerPos.x;
             let finalZ = state.playerPos.z;
             let moved = false;
-            
+
             while (true) {
                 const nextX = finalX + dx;
                 const nextZ = finalZ + dz;
 
                 if (nextZ < 0 || nextZ >= state.gridHeight || nextX < 0 || nextX >= state.gridWidth) {
-                    break; 
+                    break;
                 }
 
                 if (state.maze[nextZ][nextX] === 1) {
-                    break; 
+                    break;
                 }
 
                 finalX = nextX;
@@ -604,12 +651,12 @@
                 moved = true;
 
                 if (finalX === state.goalPos.x && finalZ === state.goalPos.z) {
-                    break; 
+                    break;
                 }
 
                 // Junction Detection
                 let isJunction = false;
-                if (dx !== 0) { 
+                if (dx !== 0) {
                     if ((state.maze[finalZ - 1] && state.maze[finalZ - 1][finalX] === 0) ||
                         (state.maze[finalZ + 1] && state.maze[finalZ + 1][finalX] === 0)) {
                         isJunction = true;
@@ -628,11 +675,11 @@
             if (moved) {
                 state.playerPos.x = finalX;
                 state.playerPos.z = finalZ;
-                
+
                 state.targetPos.x = finalX;
                 state.targetPos.z = finalZ;
 
-                playSwoosh(); 
+                playSwoosh();
 
                 state.steps++;
                 document.getElementById('step-counter').innerText = state.steps;
@@ -645,48 +692,48 @@
             if (state.playerPos.x === state.goalPos.x && state.playerPos.z === state.goalPos.z) {
                 state.isPlaying = false;
                 createWinParticles();
-                playWinSound(); 
+                playWinSound();
                 // Auto transition after 1.5 seconds
                 setTimeout(nextLevel, 1500);
             }
         }
 
         function nextLevel() {
-            playerMesh.rotation.set(0, 0, 0); 
+            playerMesh.rotation.set(0, 0, 0);
             playerMesh.scale.set(1, 1, 1);
             state.isTransitioning = true;
-            
-            playSwoosh(200, 800, 0.7); 
 
-            state.level++; 
+            playSwoosh(200, 800, 0.7);
+
+            state.level++;
 
             const transitionDuration = 700;
             const startTime = Date.now();
             const startY = playerMesh.position.y;
-            
+
             function transitionStep() {
                 const elapsed = Date.now() - startTime;
                 let progress = elapsed / transitionDuration;
 
                 if (progress < 1) {
-                    const smoothProgress = progress * progress * (3 - 2 * progress); 
+                    const smoothProgress = progress * progress * (3 - 2 * progress);
 
-                    playerMesh.position.y = startY + smoothProgress * 150; 
-                    
+                    playerMesh.position.y = startY + smoothProgress * 150;
+
                     const scaleVal = THREE.MathUtils.lerp(1, 0.01, smoothProgress);
                     playerMesh.scale.setScalar(scaleVal);
 
                     playerMesh.rotation.x += 0.2;
                     playerMesh.rotation.y += 0.3;
                     playerMesh.rotation.z += 0.4;
-                    
+
                     requestAnimationFrame(transitionStep);
                 } else {
                     state.isTransitioning = false;
-                    startLevel(); 
+                    startLevel();
                 }
             }
-            
+
             transitionStep();
         }
 
@@ -695,26 +742,26 @@
             const time = Date.now() * 0.003;
 
             if (playerMesh) {
-                if (!state.isTransitioning && !state.isEntering) { 
+                if (!state.isTransitioning && !state.isEntering) {
                     const tx = state.targetPos.x * CONFIG.cellSize;
                     const tz = state.targetPos.z * CONFIG.cellSize;
-                    
+
                     playerMesh.position.x += (tx - playerMesh.position.x) * CONFIG.moveSpeed;
                     playerMesh.position.z += (tz - playerMesh.position.z) * CONFIG.moveSpeed;
 
                     const vx = tx - playerMesh.position.x;
                     const vz = tz - playerMesh.position.z;
-                    const speed = Math.sqrt(vx*vx + vz*vz);
+                    const speed = Math.sqrt(vx * vx + vz * vz);
 
                     const hoverY = 4 + Math.sin(time * 2) * 0.5;
                     playerMesh.position.y = hoverY;
 
                     const scaleBase = 1;
                     const scalePulse = Math.sin(time * 4) * 0.1;
-                    
+
                     if (speed > 0.5) {
-                        playerMesh.rotation.z = -vx * 0.05; 
-                        playerMesh.rotation.x = vz * 0.05;  
+                        playerMesh.rotation.z = -vx * 0.05;
+                        playerMesh.rotation.x = vz * 0.05;
                         playerMesh.scale.set(1.1, 0.9, 1.1);
                         spawnTrail();
                     } else {
@@ -725,7 +772,7 @@
 
                     const camTargetX = playerMesh.position.x + 60;
                     const camTargetZ = playerMesh.position.z + 60;
-                    
+
                     camera.position.x += (camTargetX - camera.position.x) * 0.05;
                     camera.position.z += (camTargetZ - camera.position.z) * 0.05;
                     camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
@@ -744,21 +791,21 @@
 
         function spawnTrail() {
             if (!playerMesh.userData.lastTrailPos) playerMesh.userData.lastTrailPos = new THREE.Vector3();
-            
+
             // Only spawn if moved far enough from last spawn
             if (playerMesh.position.distanceTo(playerMesh.userData.lastTrailPos) > 2.5) {
                 const tGeo = new THREE.BoxGeometry(6, 6, 6);
-                const tMat = new THREE.MeshBasicMaterial({ 
-                    color: CONFIG.colors.player, 
-                    transparent: true, 
+                const tMat = new THREE.MeshBasicMaterial({
+                    color: CONFIG.colors.player,
+                    transparent: true,
                     opacity: 0.4
                 });
                 const trail = new THREE.Mesh(tGeo, tMat);
-                
+
                 trail.position.copy(playerMesh.position);
                 trail.rotation.copy(playerMesh.rotation);
                 trail.scale.copy(playerMesh.scale).multiplyScalar(0.9); // Slightly smaller
-                
+
                 trailGroup.add(trail);
                 playerMesh.userData.lastTrailPos.copy(playerMesh.position);
             }
@@ -769,7 +816,7 @@
                 const t = trailGroup.children[i];
                 t.material.opacity -= 0.025; // Fade speed
                 t.scale.multiplyScalar(0.96); // Shrink speed
-                
+
                 if (t.material.opacity <= 0) {
                     trailGroup.remove(t);
                     t.geometry.dispose();
@@ -781,8 +828,8 @@
         function createWinParticles() {
             const count = 60; // Increased particle count for better effect
             const color = new THREE.Color(CONFIG.colors.goal);
-            for(let i=0; i<count; i++) {
-                const geo = new THREE.BoxGeometry(1,1,1);
+            for (let i = 0; i < count; i++) {
+                const geo = new THREE.BoxGeometry(1, 1, 1);
                 const mat = new THREE.MeshBasicMaterial({ color: color });
                 const p = new THREE.Mesh(geo, mat);
                 p.position.copy(playerMesh.position);
@@ -801,13 +848,13 @@
                 p.position.add(p.userData.vel);
                 p.rotation.x += 0.1;
                 p.rotation.y += 0.1;
-                
+
                 // Gravity
                 p.userData.vel.y -= 0.1;
-                
+
                 // Shrink
                 p.scale.multiplyScalar(0.95);
-                
+
                 if (p.scale.x < 0.1) {
                     particleGroup.remove(p);
                 }
@@ -817,12 +864,12 @@
         function onWindowResize() {
             const aspect = window.innerWidth / window.innerHeight;
             const d = 60;
-            
+
             camera.left = -d * aspect;
             camera.right = d * aspect;
             camera.top = d;
             camera.bottom = -d;
-            
+
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
@@ -832,4 +879,5 @@
         }
     </script>
 </body>
+
 </html>
