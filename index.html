@@ -181,10 +181,37 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        .mute-btn svg {
+        .mute-btn svg,
+        .zoom-btn svg {
             width: 24px;
             height: 24px;
             fill: currentColor;
+        }
+
+        .zoom-btn {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            backdrop-filter: blur(4px);
+            pointer-events: auto;
+            transition: background 0.2s;
+            margin-left: 10px;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-group {
+            display: flex;
+            align-items: center;
         }
     </style>
 </head>
@@ -201,11 +228,19 @@
                 <div class="score-box" id="level-display">Level: 1</div>
                 <div class="score-box" style="color: #fbbf24">Steps: <span id="step-counter">0</span></div>
             </div>
-            <div class="mute-btn" id="mute-btn" title="Toggle Sound">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                </svg>
+            <div class="controls-group">
+                <div class="zoom-btn" id="zoom-btn" title="Toggle Zoom">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z" />
+                    </svg>
+                </div>
+                <div class="mute-btn" id="mute-btn" title="Toggle Sound">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                    </svg>
+                </div>
             </div>
         </div>
 
@@ -239,7 +274,7 @@
 
     <script>
         // --- Game State & Constants ---
-        const GAME_VERSION = "1.0.0-20251129-4bf3fca";
+        const GAME_VERSION = "1.0.0-20251129-9e7d69f";
 
         let CONFIG = {
             cellSize: 10,
@@ -273,7 +308,10 @@
             isTransitioning: false,
             isTransitioning: false,
             isEntering: false,
+            isTransitioning: false,
+            isEntering: false,
             isMuted: false,
+            isZoomedOut: false,
         };
 
         // --- Three.js Globals ---
@@ -282,6 +320,7 @@
         let mazeGroup = new THREE.Group();
         let particleGroup = new THREE.Group();
         let trailGroup = new THREE.Group();
+        let dirLight;
 
         // --- Audio System ---
         let audioCtx;
@@ -378,6 +417,26 @@
             }
         }
 
+        function toggleZoom() {
+            state.isZoomedOut = !state.isZoomedOut;
+            const btn = document.getElementById('zoom-btn');
+            if (state.isZoomedOut) {
+                // Zoom In Icon
+                btn.innerHTML = `
+                <svg viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/>
+                </svg>`;
+                btn.style.opacity = "1";
+            } else {
+                // Zoom Out Icon
+                btn.innerHTML = `
+                <svg viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/>
+                </svg>`;
+                btn.style.opacity = "0.7";
+            }
+        }
+
         function init() {
             const container = document.getElementById('game-container');
 
@@ -399,19 +458,20 @@
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
             dirLight.position.set(50, 80, 30);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048;
             dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.near = 0.5;
             dirLight.shadow.camera.far = 500;
-            const shadowD = 100;
+            const shadowD = 200; // Increased shadow coverage
             dirLight.shadow.camera.left = -shadowD;
             dirLight.shadow.camera.right = shadowD;
             dirLight.shadow.camera.top = shadowD;
             dirLight.shadow.camera.bottom = -shadowD;
             scene.add(dirLight);
+            scene.add(dirLight.target);
 
             scene.add(mazeGroup);
             scene.add(particleGroup);
@@ -462,6 +522,12 @@
             document.getElementById('mute-btn').addEventListener('click', (e) => {
                 e.stopPropagation(); // Prevent triggering other click handlers
                 toggleMute();
+            });
+
+            // Zoom Button Listener
+            document.getElementById('zoom-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleZoom();
             });
         }
 
@@ -557,6 +623,15 @@
                 }
             }
             state.goalPos = bestGoal;
+
+            // Center light on maze
+            if (dirLight) {
+                const cx = (state.gridWidth * CONFIG.cellSize) / 2;
+                const cz = (state.gridHeight * CONFIG.cellSize) / 2;
+                dirLight.position.set(cx + 50, 80, cz + 30);
+                dirLight.target.position.set(cx, 0, cz);
+                dirLight.target.updateMatrixWorld();
+            }
 
             build3DWorld();
             enterLevelAnimation();
@@ -669,7 +744,7 @@
         }
 
         function onKeyDown(e) {
-            if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
+            if (!state.isPlaying || state.isTransitioning || state.isEntering || state.isZoomedOut) return;
 
             initAudio();
 
@@ -706,7 +781,7 @@
 
                     initAudio();
 
-                    if (!state.isPlaying || state.isTransitioning || state.isEntering) return;
+                    if (!state.isPlaying || state.isTransitioning || state.isEntering || state.isZoomedOut) return;
                     const dir = btn.getAttribute('data-dir');
                     if (dir === 'up') movePlayer(0, -1);
                     if (dir === 'down') movePlayer(0, 1);
@@ -862,12 +937,66 @@
                         playerMesh.scale.set(scaleBase + scalePulse, scaleBase - scalePulse, scaleBase + scalePulse);
                     }
 
-                    const camTargetX = playerMesh.position.x + 60;
-                    const camTargetZ = playerMesh.position.z + 60;
+                    let camTargetX, camTargetZ, camTargetZoom;
 
-                    camera.position.x += (camTargetX - camera.position.x) * 0.05;
-                    camera.position.z += (camTargetZ - camera.position.z) * 0.05;
-                    camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
+                    if (state.isZoomedOut) {
+                        // Center of the maze
+                        camTargetX = (state.gridWidth * CONFIG.cellSize) / 2;
+                        camTargetZ = (state.gridHeight * CONFIG.cellSize) / 2;
+
+                        // Calculate zoom to fit
+                        const maxDim = Math.max(state.gridWidth, state.gridHeight) * CONFIG.cellSize;
+                        camTargetZoom = maxDim * 0.8; // Adjust multiplier to fit
+                    } else {
+                        // Follow player
+                        camTargetX = playerMesh.position.x + 60;
+                        camTargetZ = playerMesh.position.z + 60;
+                        camTargetZoom = 60; // Default zoom
+                    }
+
+                    // Smooth Camera Transition
+                    if (state.isZoomedOut) {
+                        camera.position.x += (camTargetX + 60 - camera.position.x) * 0.05;
+                        camera.position.z += (camTargetZ + 60 - camera.position.z) * 0.05;
+
+                        // Adjust Orthographic Zoom (top/bottom/left/right)
+                        const currentZoom = camera.top;
+                        const targetZoom = camTargetZoom;
+                        const newZoom = THREE.MathUtils.lerp(currentZoom, targetZoom, 0.05);
+
+                        const aspect = window.innerWidth / window.innerHeight;
+                        camera.left = -newZoom * aspect;
+                        camera.right = newZoom * aspect;
+                        camera.top = newZoom;
+                        camera.bottom = -newZoom;
+                        camera.updateProjectionMatrix();
+
+                        camera.lookAt(camTargetX, 0, camTargetZ);
+
+                        // Adjust Fog for Zoom Out
+                        scene.fog.far = THREE.MathUtils.lerp(scene.fog.far, 1000, 0.05);
+
+                    } else {
+                        camera.position.x += (camTargetX - camera.position.x) * 0.05;
+                        camera.position.z += (camTargetZ - camera.position.z) * 0.05;
+
+                        // Reset Zoom
+                        const currentZoom = camera.top;
+                        const targetZoom = 60;
+                        const newZoom = THREE.MathUtils.lerp(currentZoom, targetZoom, 0.05);
+
+                        const aspect = window.innerWidth / window.innerHeight;
+                        camera.left = -newZoom * aspect;
+                        camera.right = newZoom * aspect;
+                        camera.top = newZoom;
+                        camera.bottom = -newZoom;
+                        camera.updateProjectionMatrix();
+
+                        camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
+
+                        // Reset Fog
+                        scene.fog.far = THREE.MathUtils.lerp(scene.fog.far, 150, 0.05);
+                    }
                 }
             }
 
