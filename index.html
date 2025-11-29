@@ -213,6 +213,52 @@
             display: flex;
             align-items: center;
         }
+
+        .welcome-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .welcome-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px 40px;
+            margin: 10px;
+            border-radius: 30px;
+            font-size: 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 200px;
+            text-align: center;
+        }
+
+        .difficulty-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 
@@ -266,7 +312,16 @@
                 </svg>
             </div>
         </div>
-        <div class="version-display" id="version-text"></div>
+
+        <div class="welcome-screen" id="welcome-screen">
+            <div class="welcome-title">Maze Flow</div>
+            <div class="difficulty-btn" onclick="startGame(1)">Easy </div>
+            <div class="difficulty-btn" onclick="startGame(20)">Medium </div>
+            <div class="difficulty-btn" onclick="startGame(40)">Hard </div>
+            <div class="difficulty-btn" onclick="startGame(100)">Nightmare </div>
+        </div>
+
+        <div class="version-display" id="version-text">v<span id="version-number"></span></div>
     </div>
 
     <!-- Three.js from CDN -->
@@ -274,7 +329,7 @@
 
     <script>
         // --- Game State & Constants ---
-        const GAME_VERSION = "1.0.0-20251129-a3a2feb";
+        const GAME_VERSION = "1.0.0-20251129-4d1a0b8";
 
         let CONFIG = {
             cellSize: 10,
@@ -486,7 +541,9 @@
             setupSwipeControls();
             setupPinchControls();
 
-            startLevel();
+
+
+            // startLevel(); // Removed auto-start
             animate();
 
             // Prevent Zooming
@@ -531,6 +588,12 @@
             document.getElementById('zoom-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleZoom();
+            });
+
+            // Level Display Listener
+            document.getElementById('level-display').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('welcome-screen').style.display = 'flex';
             });
         }
 
@@ -1160,6 +1223,13 @@
                     particleGroup.remove(p);
                 }
             }
+        }
+
+        function startGame(level) {
+            state.level = level;
+            document.getElementById('welcome-screen').style.display = 'none';
+            initAudio();
+            startLevel();
         }
 
         function onWindowResize() {
