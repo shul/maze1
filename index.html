@@ -274,7 +274,7 @@
 
     <script>
         // --- Game State & Constants ---
-        const GAME_VERSION = "1.0.0-20251129-9e7d69f";
+        const GAME_VERSION = "1.0.0-20251129-0301d80";
 
         let CONFIG = {
             cellSize: 10,
@@ -481,7 +481,9 @@
             document.addEventListener('keydown', onKeyDown);
 
             // Setup Touch
+            // Setup Touch
             setupTouchControls();
+            setupSwipeControls();
 
             startLevel();
             animate();
@@ -789,6 +791,42 @@
                     if (dir === 'right') movePlayer(1, 0);
                 });
             });
+        }
+
+        function setupSwipeControls() {
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            document.addEventListener('touchstart', function (e) {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: false });
+
+            document.addEventListener('touchend', function (e) {
+                if (!state.isPlaying || state.isTransitioning || state.isEntering || state.isZoomedOut) return;
+
+                initAudio();
+
+                const touchEndX = e.changedTouches[0].screenX;
+                const touchEndY = e.changedTouches[0].screenY;
+
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal
+                    if (Math.abs(dx) > 30) {
+                        if (dx > 0) movePlayer(1, 0); // Right
+                        else movePlayer(-1, 0); // Left
+                    }
+                } else {
+                    // Vertical
+                    if (Math.abs(dy) > 30) {
+                        if (dy > 0) movePlayer(0, 1); // Down
+                        else movePlayer(0, -1); // Up
+                    }
+                }
+            }, { passive: false });
         }
 
         function movePlayer(dx, dz) {
