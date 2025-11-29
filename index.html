@@ -329,7 +329,7 @@
 
     <script>
         // --- Game State & Constants ---
-        const GAME_VERSION = "1.0.0-20251129-4d1a0b8";
+        const GAME_VERSION = "1.0.0-20251129-618df67";
 
         let CONFIG = {
             cellSize: 10,
@@ -1080,61 +1080,50 @@
                         playerMesh.scale.set(scaleBase + scalePulse, scaleBase - scalePulse, scaleBase + scalePulse);
                     }
 
-                    let camTargetX, camTargetZ, camTargetZoom;
+                    let camTargetX, camTargetY, camTargetZ, camTargetZoom;
 
                     if (state.isZoomedOut) {
-                        // Center of the maze
+                        // Center of the maze, Top Down
                         camTargetX = (state.gridWidth * CONFIG.cellSize) / 2;
+                        camTargetY = 200; // High up
                         camTargetZ = (state.gridHeight * CONFIG.cellSize) / 2;
 
                         // Calculate zoom to fit
                         const maxDim = Math.max(state.gridWidth, state.gridHeight) * CONFIG.cellSize;
-                        camTargetZoom = maxDim * 0.8; // Adjust multiplier to fit
+                        camTargetZoom = maxDim * 0.6; // Adjust multiplier to fit
                     } else {
-                        // Follow player
+                        // Follow player, Isometric
                         camTargetX = playerMesh.position.x + 60;
+                        camTargetY = 60;
                         camTargetZ = playerMesh.position.z + 60;
                         camTargetZoom = 60; // Default zoom
                     }
 
                     // Smooth Camera Transition
+                    camera.position.x += (camTargetX - camera.position.x) * 0.05;
+                    camera.position.y += (camTargetY - camera.position.y) * 0.05;
+                    camera.position.z += (camTargetZ - camera.position.z) * 0.05;
+
+                    // Adjust Orthographic Zoom (top/bottom/left/right)
+                    const currentZoom = camera.top;
+                    const newZoom = THREE.MathUtils.lerp(currentZoom, camTargetZoom, 0.05);
+
+                    const aspect = window.innerWidth / window.innerHeight;
+                    camera.left = -newZoom * aspect;
+                    camera.right = newZoom * aspect;
+                    camera.top = newZoom;
+                    camera.bottom = -newZoom;
+                    camera.updateProjectionMatrix();
+
                     if (state.isZoomedOut) {
-                        camera.position.x += (camTargetX + 60 - camera.position.x) * 0.05;
-                        camera.position.z += (camTargetZ + 60 - camera.position.z) * 0.05;
-
-                        // Adjust Orthographic Zoom (top/bottom/left/right)
-                        const currentZoom = camera.top;
-                        const targetZoom = camTargetZoom;
-                        const newZoom = THREE.MathUtils.lerp(currentZoom, targetZoom, 0.05);
-
-                        const aspect = window.innerWidth / window.innerHeight;
-                        camera.left = -newZoom * aspect;
-                        camera.right = newZoom * aspect;
-                        camera.top = newZoom;
-                        camera.bottom = -newZoom;
-                        camera.updateProjectionMatrix();
-
-                        camera.lookAt(camTargetX, 0, camTargetZ);
+                        // Look at center
+                        const cx = (state.gridWidth * CONFIG.cellSize) / 2;
+                        const cz = (state.gridHeight * CONFIG.cellSize) / 2;
+                        camera.lookAt(cx, 0, cz);
 
                         // Adjust Fog for Zoom Out
                         scene.fog.far = THREE.MathUtils.lerp(scene.fog.far, 1000, 0.05);
-
                     } else {
-                        camera.position.x += (camTargetX - camera.position.x) * 0.05;
-                        camera.position.z += (camTargetZ - camera.position.z) * 0.05;
-
-                        // Reset Zoom
-                        const currentZoom = camera.top;
-                        const targetZoom = 60;
-                        const newZoom = THREE.MathUtils.lerp(currentZoom, targetZoom, 0.05);
-
-                        const aspect = window.innerWidth / window.innerHeight;
-                        camera.left = -newZoom * aspect;
-                        camera.right = newZoom * aspect;
-                        camera.top = newZoom;
-                        camera.bottom = -newZoom;
-                        camera.updateProjectionMatrix();
-
                         camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
 
                         // Reset Fog
